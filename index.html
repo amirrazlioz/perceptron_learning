@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>אלגוריתם הלמידה של הפרספטרון</title>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--blue:#38bdf8;--red:#fb7185;--yellow:#fde047;--card:rgba(255,255,255,.06);--line:rgba(255,255,255,.14)}
+*{box-sizing:border-box}
+body{font-family:'Rubik','Segoe UI',Arial,sans-serif;background:radial-gradient(circle at 20% 0%,#312e81 0%,#0f172a 55%) fixed;color:#e2e8f0;text-align:center;padding:12px;margin:0;min-height:100vh}
+.container{max-width:1300px;margin:0 auto}
+.back{color:#a5b4fc;font-size:13px;text-decoration:none}
+h1{font-size:1.6rem;font-weight:800;margin:8px 0 4px;background:linear-gradient(90deg,var(--blue),#a78bfa,var(--red));-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{margin:0 0 12px;color:#cbd5e1}
+canvas{display:block;margin:0 auto;width:min(100%,88vh);height:auto;border-radius:16px;background:#0b1020;border:2px solid var(--line);box-shadow:0 0 40px rgba(99,102,241,.25)}
+.legend{font-size:12.5px;color:#cbd5e1;margin:8px 0}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:center;margin:10px 0}
+button{background:linear-gradient(135deg,#0ea5e9,#6366f1);color:#fff;border:0;padding:8px 14px;border-radius:999px;cursor:pointer;font:600 14px 'Rubik',Arial,sans-serif;transition:transform .15s,box-shadow .15s}
+button:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(99,102,241,.45)}
+button.alt{background:linear-gradient(135deg,#64748b,#334155)}
+.sl{display:inline-flex;align-items:center;gap:6px;font-size:13px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 12px}
+input[type=range]{width:90px;accent-color:#a78bfa}
+.main{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:14px;align-items:start}.right{display:flex;flex-direction:column;gap:10px;text-align:right;font-size:14px}@media(max-width:900px){.main{grid-template-columns:1fr}}
+.box{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px}
+.box h3{margin:0 0 8px}
+ol{margin:0;padding-right:22px}
+li{padding:4px 8px;border-radius:8px;margin-bottom:4px;transition:background .3s}
+li.on{background:rgba(253,224,71,.18);outline:1px solid var(--yellow)}
+.math{direction:ltr;unicode-bidi:isolate;display:inline-block}
+#msg{min-height:120px;line-height:1.75}
+.ok{color:#4ade80}.bad{color:var(--red)}
+#st{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;font-size:13px;color:#cbd5e1;border-top:1px solid var(--line);padding-top:8px}
+</style>
+</head>
+<body>
+<div class="container">
+  <a class="back" href="perceptron.html">← חזרה למעבדת הפרספטרון</a>
+  <h1>🧠 אלגוריתם הלמידה של הפרספטרון</h1>
+  <p class="sub">הפרספטרון לומד מטעויות: הוא בודק נקודה אחרי נקודה, ובכל פעם שהוא טועה – הוא מזיז את הקו.</p>
+
+  <div class="main">
+  <div class="left">
+  <canvas id="cv" width="600" height="400"></canvas>
+  <div class="legend">🔵 כחול = 1 &nbsp;|&nbsp; 🔴 אדום = 0 &nbsp;|&nbsp; ◌ מקווקו = הקו הנוכחי טועה בנקודה &nbsp;|&nbsp; 🟡 טבעת = הנקודה הנבדקת &nbsp;|&nbsp; החץ w = הכיוון ה"כחול" של הקו</div>
+
+  <div class="toolbar">
+    <button id="play" onclick="togglePlay()">▶ הפעל</button>
+    <button onclick="manualStep()">⏭ צעד אחד</button>
+    <button class="alt" onclick="reset()">↺ התחל מחדש</button>
+    <button class="alt" onclick="newData()">🎲 נתונים חדשים</button>
+    <span class="sl">מהירות <input type="range" id="speed" min="1" max="5" value="3"></span>
+  </div>
+
+  </div>
+  <div class="right">
+    <div class="box">
+      <h3>📋 האלגוריתם</h3>
+      <div class="math" style="margin-bottom:6px"><b>אתחול:</b> w = 0 , b = 0</div>
+      <div style="margin-bottom:6px"><b>כל עוד</b> לא כל הדוגמאות מסווגות נכון:<br><b>לכל</b> דוגמה (x, y):</div>
+      <ol>
+        <li id="a1">מחשבים <span class="math">z = w·x + b</span><br>ומחזים:<br>אם <span class="math">z ≥ 0 &nbsp;⇒&nbsp; ŷ = 1</span><br>אם <span class="math">z &lt; 0 &nbsp;⇒&nbsp; ŷ = 0</span></li>
+        <li id="a2">אם <span class="math">y = 1</span> אבל <span class="math">ŷ = 0</span>:<br><span class="math">w = w + x</span> &nbsp; <span class="math">b = b + 1</span></li>
+        <li id="a3">אם <span class="math">y = 0</span> אבל <span class="math">ŷ = 1</span>:<br><span class="math">w = w − x</span> &nbsp; <span class="math">b = b − 1</span></li>
+        <li id="a4">חוזרים על כל הדוגמאות (סבב), עד שיש סבב שלם בלי אף טעות.</li>
+      </ol>
+    </div>
+    <div class="box">
+      <h3>🔍 מה קורה עכשיו?</h3>
+      <div id="msg"></div>
+      <div id="st"></div>
+    </div>
+  </div>
+  </div>
+</div>
+
+<script>
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+const W=600,H=400,S=200,BLUE='#38bdf8',RED='#fb7185';
+const $=id=>document.getElementById(id);
+const f=v=>(v<0?'−':'')+Math.abs(v).toFixed(2);
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const predict=(p,q)=>(q.w1*p.x+q.w2*p.y+q.b)>=0?1:0;
+const toC=(x,y)=>[W/2+x*S,H/2-y*S];
+
+let pts=[],init,w,dw,ghost,idx,phase,cur,errs,epoch,updates,done,playing=false,timer;
+
+function newData(){
+  const a=rnd(0,2*Math.PI),off=rnd(-.3,.3),nx=Math.cos(a),ny=Math.sin(a);
+  do{
+    pts=[];
+    while(pts.length<14){
+      const x=rnd(-1.3,1.3),y=rnd(-.85,.85),d=x*nx+y*ny-off;
+      if(Math.abs(d)>.15)pts.push({x,y,c:d>0?1:0});
+    }
+  }while(pts.filter(p=>p.c).length<4||pts.filter(p=>!p.c).length<4);
+  init={w1:0,w2:0,b:0};
+  reset();
+}
+
+function reset(){
+  stop();
+  w={...init};dw={...init};ghost=null;idx=0;phase='check';cur=-1;errs=0;epoch=1;updates=0;done=false;
+  setActive([]);
+  $('msg').innerHTML='מתחילים עם w = 0 ו-b = 0, ולכן עדיין אין קו, וכל הנקודות מקבלות ŷ = 1. לחצו <b>▶ הפעל</b> או <b>⏭ צעד אחד</b>.';
+  stats();
+}
+
+function setActive(list){for(let i=1;i<=4;i++)$('a'+i).classList.toggle('on',list.includes(i));}
+function stats(){
+  $('st').innerHTML=`<span>סבב: <b>${epoch}</b></span><span>טעויות בסבב: <b>${errs}</b></span><span>עדכונים: <b>${updates}</b></span><span class="math">w₁=${f(w.w1)} &nbsp; w₂=${f(w.w2)} &nbsp; b=${f(w.b)}</span>`;
+}
+
+function step(){
+  if(done)return;
+  if(phase==='check'){
+    if(idx>=pts.length){
+      if(errs===0){finish();return;}
+      epoch++;idx=0;errs=0;
+    }
+    cur=idx;
+    const p=pts[cur],z=w.w1*p.x+w.w2*p.y+w.b,yh=z>=0?1:0,err=p.c-yh;
+    let m=`בודקים דוגמה <b style="color:${p.c?BLUE:RED}">כחולה (y = 1)</b> ב-<span class="math">x = (${f(p.x)}, ${f(p.y)})</span><br>`.replace('כחולה (y = 1)',p.c?'כחולה (y = 1)':'אדומה (y = 0)')
+      +`<b>חישוב z:</b> <span class="math">z = ${f(w.w1)}·${f(p.x)} + ${f(w.w2)}·${f(p.y)} + ${f(w.b)} = <b>${f(z)}</b></span><br>`
+      +`<b>לכן כרגע:</b> <span class="math">ŷ = ${yh}</span> (כי z ${z>=0?'≥':'<'} 0)<br>`;
+    setActive([1]);
+    if(err===0){m+=`<b>התשובה הנכונה היא:</b> <span class="math">y = ${p.c}</span> – <b class="ok">זהה ל-ŷ ✓ אין צורך לתקן כלום</b>`;idx++;}
+    else{m+=`<b>אבל התשובה הנכונה היא:</b> <span class="math">y = ${p.c}</span> – <b class="bad">שונה מ-ŷ ✗ בצעד הבא נתקן את w ו-b</b>`;phase='update';errs++;}
+    $('msg').innerHTML=m;stats();return;
+  }
+  const p=pts[cur],err=p.c-predict(p,w),o={...w},sg=err>0?'+':'−';
+  ghost={...w,a:1};
+  w.w1+=err*p.x;w.w2+=err*p.y;w.b+=err;
+  updates++;idx++;phase='check';setActive([err>0?2:3]);
+  $('msg').innerHTML=`<b>מתקנים את w ו-b</b> (${err>0?'y = 1 אבל ŷ = 0':'y = 0 אבל ŷ = 1'}):<br><span class="math">w = w ${sg} x , b = b ${sg} 1</span><br>`
+    +`<span class="math">w₁: ${f(o.w1)} ${sg} (${f(p.x)}) = <b>${f(w.w1)}</b></span><br>`
+    +`<span class="math">w₂: ${f(o.w2)} ${sg} (${f(p.y)}) = <b>${f(w.w2)}</b></span><br>`
+    +`<span class="math">b: ${f(o.b)} ${sg} 1 = <b>${f(w.b)}</b></span><br>`
+    +`הקו הישן (מקווקו) זז, כך שהדוגמה הזו נוטה לעבור לצד הנכון.`;
+  stats();
+}
+
+function finish(){
+  done=true;stop();cur=-1;setActive([]);
+  $('msg').innerHTML=`<b class="ok">🎉 הפרספטרון למד!</b><br>סבב שלם עבר על כל הנקודות בלי אף טעות – הקו מפריד נכון בין הכחולות לאדומות.<br>עשינו ${updates} עדכונים ב-${epoch} סבבים. נסו "נתונים חדשים".`;
+}
+
+function stop(){playing=false;clearTimeout(timer);$('play').textContent='▶ הפעל';}
+function togglePlay(){
+  if(done)return;
+  if(playing){stop();return;}
+  playing=true;$('play').textContent='⏸ עצור';loop();
+}
+function loop(){if(!playing)return;step();timer=setTimeout(loop,2600/$('speed').value);}
+function manualStep(){stop();step();}
+
+// ---------- ציור ----------
+function geo(q){
+  const m=Math.hypot(q.w1,q.w2)||1e-6,nx=q.w1/m,ny=q.w2/m;
+  const px=-q.b*nx/m,py=-q.b*ny/m;return{nx,ny,px,py,dx:-ny,dy:nx,L:8+Math.hypot(px,py)};
+}
+function poly(v,col){
+  ctx.beginPath();
+  v.forEach(([x,y],i)=>{const [cx,cy]=toC(x,y);i?ctx.lineTo(cx,cy):ctx.moveTo(cx,cy);});
+  ctx.closePath();ctx.fillStyle=col;ctx.fill();
+}
+function drawLine(q,col,width,dash,alpha){
+  const g=geo(q),L=g.L,[x1,y1]=toC(g.px-g.dx*L,g.py-g.dy*L),[x2,y2]=toC(g.px+g.dx*L,g.py+g.dy*L);
+  ctx.save();ctx.globalAlpha=alpha;ctx.strokeStyle=col;ctx.lineWidth=width;ctx.setLineDash(dash);
+  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();ctx.restore();
+}
+
+function draw(t){
+  ctx.clearRect(0,0,W,H);
+  ctx.strokeStyle='rgba(255,255,255,.06)';ctx.lineWidth=1;
+  for(let x=0;x<=W;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=0;y<=H;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+
+  const g=geo(dw),L=g.L;
+  const side=s=>[[g.px+g.dx*L,g.py+g.dy*L],[g.px-g.dx*L,g.py-g.dy*L],[g.px-g.dx*L+s*g.nx*L,g.py-g.dy*L+s*g.ny*L],[g.px+g.dx*L+s*g.nx*L,g.py+g.dy*L+s*g.ny*L]];
+  if(Math.hypot(dw.w1,dw.w2)<1e-3){
+    ctx.fillStyle=dw.b>=0?'rgba(56,189,248,.28)':'rgba(251,113,133,.28)';ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#e2e8f0';ctx.font='14px Arial';ctx.textAlign='center';
+    ctx.fillText('עדיין אין קו (w = 0): הכל מסווג כ-1',W/2,26);ctx.textAlign='start';
+  }else{
+    poly(side(1),'rgba(56,189,248,.28)');
+    poly(side(-1),'rgba(251,113,133,.28)');
+    if(ghost&&Math.hypot(ghost.w1,ghost.w2)>1e-3)drawLine(ghost,'#fff',2,[6,6],Math.max(ghost.a,0));
+    drawLine(dw,'#fde047',3,[],1);
+    const [sx,sy]=toC(g.px,g.py),[ex,ey]=toC(g.px+g.nx*.4,g.py+g.ny*.4),an=Math.atan2(ey-sy,ex-sx);
+    ctx.strokeStyle=ctx.fillStyle='#fff';ctx.lineWidth=3;
+    ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(ex,ey);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(ex,ey);ctx.lineTo(ex-10*Math.cos(an-.5),ey-10*Math.sin(an-.5));ctx.lineTo(ex-10*Math.cos(an+.5),ey-10*Math.sin(an+.5));ctx.closePath();ctx.fill();
+    ctx.font='bold 15px Arial';ctx.fillText('w',ex+8*Math.cos(an)+4,ey+8*Math.sin(an)+4);
+  }
+
+  pts.forEach((p,i)=>{
+    const [cx,cy]=toC(p.x,p.y),col=p.c?BLUE:RED;
+    if(predict(p,dw)!==p.c){
+      ctx.save();ctx.setLineDash([4,4]);ctx.strokeStyle='rgba(255,255,255,.8)';ctx.lineWidth=2;
+      ctx.beginPath();ctx.arc(cx,cy,18,0,7);ctx.stroke();ctx.restore();
+    }
+    ctx.save();ctx.shadowColor=col;ctx.shadowBlur=14;ctx.fillStyle=col;
+    ctx.beginPath();ctx.arc(cx,cy,10,0,7);ctx.fill();
+    ctx.shadowBlur=0;ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();ctx.restore();
+    if(i===cur){
+      ctx.strokeStyle='#fde047';ctx.lineWidth=3;
+      ctx.beginPath();ctx.arc(cx,cy,18+3*Math.sin(t/180),0,7);ctx.stroke();
+    }
+  });
+}
+
+function frame(t){
+  for(const k of['w1','w2','b'])dw[k]+=(w[k]-dw[k])*.12;
+  if(ghost){ghost.a-=.007;if(ghost.a<=0)ghost=null;}
+  draw(t);requestAnimationFrame(frame);
+}
+
+newData();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
